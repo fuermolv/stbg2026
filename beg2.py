@@ -7,7 +7,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from backoff import CancelBackoff
 from config import POSITION
 import signal
-import sys
+from zoneinfo import ZoneInfo
+from datetime import datetime
+from config import SKIP_HOUR_START, SKIP_HOUR_END
 
 BPS = 8.5
 MIN_BPS = 7
@@ -48,7 +50,7 @@ def clean_position(auth):
         print(f'Cleaning position: side={side}, qty={qty}, entry_price={entry_price}, maker price {price}, position_value={position_vaule}')
         cl_ord_id = maker_clean_position(auth, price, qty, clean_side)
         try:
-            for index in range(60):
+            for index in range(15):
                 order = query_order(auth, cl_ord_id)
                 print(f'{index} waiting maker cleaning position order status: {order["status"]} qty: {order["qty"]} price: {entry_price}, order price: {order["price"]}')
                 if order["status"] == "filled":
@@ -125,12 +127,17 @@ def main():
                         print(f"bps out of range, canceling orders, sleeping for {next_sleep} seconds")
                         time.sleep(next_sleep)
                 else:   
+                    current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
+                    current_hour = current_time.hour
+                    if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
+                        print(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
+                        time.sleep(10)
+                        continue
                     long_order_price = mark_price * (1 - BPS / 10000)
                     long_order_price = format(long_order_price, ".2f")
                     long_qty = POSITION / float(long_order_price)
                     long_qty = format(long_qty, ".4f")
                     long_cl_ord_id = create_order(auth, long_order_price, long_qty, "buy")
-
                     short_order_price = mark_price * (1 + BPS / 10000)
                     short_order_price = format(short_order_price, ".2f")
                     short_qty = POSITION / float(short_order_price)
