@@ -5,8 +5,8 @@ from nacl.signing import SigningKey
 from common import query_order, cancel_order, taker_clean_position, get_price, create_order, maker_clean_position, query_positions
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from backoff import CancelBackoff
+from config import POSITION
 
-POSITION = 50000
 BPS = 8.5
 MIN_BPS = 7
 MAX_BPS = 10

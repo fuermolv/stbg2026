@@ -4,8 +4,9 @@ import time
 from nacl.signing import SigningKey
 from common import query_order, cancel_order, taker_clean_position, get_price, create_order, maker_clean_position, query_positions
 from backoff import CancelBackoff
+from config import POSITION
 
-POSITION = 100000
+
 BPS = 20
 MIN_BPS = 10
 MAX_BPS = 30
