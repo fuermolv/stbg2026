@@ -24,9 +24,9 @@ def clean_position(auth):
         position_vaule = abs(float(position['position_value']))
         entry_price = float(position['entry_price'])
         if clean_side == 'buy':
-            price = entry_price - 20
+            price = entry_price
         else:
-            price = entry_price + 20
+            price = entry_price
         print(f'Cleaning position: side={side}, qty={qty}, entry_price={entry_price}, maker price {price}, position_value={position_vaule}')
         cl_ord_id = maker_clean_position(auth, price, qty, clean_side)
         try:
