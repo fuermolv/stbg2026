@@ -2,7 +2,7 @@
 import json
 import time
 from nacl.signing import SigningKey
-from common import query_order, cancel_order, taker_clean_position, get_price, create_order, maker_clean_position
+from common import query_order, cancel_order, taker_clean_position, get_price, create_order, maker_clean_position, query_positions
 
 
 POSITION = 50000
@@ -12,24 +12,38 @@ MAX_BPS = 30
 SIDE = "sell"
 
 
-def clean_position(auth, qty, price):
-    clean_side = "buy" if SIDE == "sell" else "sell"
-    cl_ord_id = maker_clean_position(auth, price, qty, clean_side)
-    try:
-        for index in range(120):
-            order = query_order(auth, cl_ord_id)
-            print(f'{index} waiting maker cleaning position order status: {order["status"]} qty: {order["qty"]} price: {price}, order price: {order["price"]}')
-            if order["status"] == "filled":
-                return
-            time.sleep(1)
-    except Exception as e:
-        print("maker clean position exception, using taker to clean position")
+def clean_position(auth):
+    positions = query_positions(auth)
+    for position in positions:
+        if not position['qty'] or float(position['qty']) == 0:
+            continue
+        side = 'sell' if float(position['qty']) < 0 else 'buy'
+        qty = abs(float(position['qty']))
+        clean_side = 'buy' if side == 'sell' else 'sell'
+        position_vaule = abs(float(position['position_value']))
+        entry_price = float(position['entry_price'])
+        if clean_side == 'buy':
+            price = entry_price - 20
+        else:
+            price = entry_price + 20
+        print(f'Cleaning position: side={side}, qty={qty}, entry_price={entry_price}, maker price {price}, position_value={position_vaule}')
+        cl_ord_id = maker_clean_position(auth, price, qty, clean_side)
+        try:
+            for index in range(60):
+                order = query_order(auth, cl_ord_id)
+                print(f'{index} waiting maker cleaning position order status: {order["status"]} qty: {order["qty"]} price: {entry_price}, order price: {order["price"]}')
+                if order["status"] == "filled":
+                    return
+                time.sleep(1)
+        except Exception as e:
+            print("maker clean position exception, using taker to clean position")
+            taker_clean_position(auth, qty, clean_side)
+            raise e
+        print("maker clean position timeout, canceling order")
+        cancel_order(auth, cl_ord_id)
+        print("using taker to clean position")
         taker_clean_position(auth, qty, clean_side)
-        raise e
-    print("maker clean position timeout, canceling order")
-    cancel_order(auth, cl_ord_id)
-    print("using taker to clean position")
-    taker_clean_position(auth, qty, clean_side)
+        print("position cleaned")
 
 
 def main():
@@ -48,11 +62,10 @@ def main():
                 diff_bps = abs(mark_price - float(order["price"])) / mark_price * 10000
                 print(f'pos:{POSITION} order pos: {order["qty"]} status: {order["status"]}, mark_price: {mark_price}, order price: {order["price"]},  diff_bps: {diff_bps}')
                 if order["status"] == "filled":
-                    clean_position(auth, float(order["qty"]), float(order["price"]))
+                    clean_position(auth)
                     cl_ord_id = None
-                    print("position cleaned, placing new order after 10 minutes")
-                    time.sleep(1)
-                    time.sleep(600)
+                    print("position cleaned, placing new orders after 10 seconds")
+                    time.sleep(10)
                 if diff_bps <= MIN_BPS or diff_bps >= MAX_BPS:
                     cancel_order(auth, cl_ord_id)
                     cl_ord_id = None

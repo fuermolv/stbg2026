@@ -15,12 +15,13 @@ MAX_BPS = 10
 def clean_position(auth):
     positions = query_positions(auth)
     for position in positions:
+        if not position['qty'] or float(position['qty']) == 0:
+            continue
         side = 'sell' if float(position['qty']) < 0 else 'buy'
         qty = abs(float(position['qty']))
         clean_side = 'buy' if side == 'sell' else 'sell'
         position_vaule = abs(float(position['position_value']))
         entry_price = float(position['entry_price'])
-
         if clean_side == 'buy':
             price = entry_price - 20
         else:
