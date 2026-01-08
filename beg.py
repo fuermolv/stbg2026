@@ -42,11 +42,11 @@ def main():
     cl_ord_id = None
     try:
         while True:
-            index_price = float(get_price(auth)["mid_price"])
+            mark_price = float(get_price(auth)["mark_price"])
             if cl_ord_id:
                 order = query_order(auth, cl_ord_id)
-                diff_bps = abs(index_price - float(order["price"])) / index_price * 10000
-                print(f'pos:{POSITION} order pos: {order["qty"]} status: {order["status"]}, index price: {index_price}, order price: {order["price"]},  diff_bps: {diff_bps}')
+                diff_bps = abs(mark_price - float(order["price"])) / mark_price * 10000
+                print(f'pos:{POSITION} order pos: {order["qty"]} status: {order["status"]}, mark_price: {mark_price}, order price: {order["price"]},  diff_bps: {diff_bps}')
                 if order["status"] == "filled":
                     clean_position(auth, float(order["qty"]), float(order["price"]))
                     cl_ord_id = None
@@ -58,7 +58,7 @@ def main():
                     cl_ord_id = None
             else:
                 sign = 1 if SIDE == "sell" else -1
-                order_price = index_price * (1 + sign * BPS / 10000)
+                order_price = mark_price * (1 + sign * BPS / 10000)
                 order_price = format(order_price, ".2f")
                 qty = POSITION / float(order_price)
                 qty = format(qty, ".4f")

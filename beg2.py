@@ -80,12 +80,12 @@ def main():
         short_cl_ord_id = None
         try:
             while True:
-                index_price = float(get_price(auth)["mid_price"])
+                mark_price = float(get_price(auth)["mark_price"])
                 if long_cl_ord_id and short_cl_ord_id:
                     order_dict = query_orders(auth, [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid])
-                    long_diff_bps = abs(index_price - float(order_dict[long_cl_ord_id]["price"])) / index_price * 10000 if long_cl_ord_id else None
-                    short_diff_bps = abs(index_price - float(order_dict[short_cl_ord_id]["price"])) / index_price * 10000 if short_cl_ord_id else None
-                    print(f'pos:{POSITION}, index price: {index_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}')
+                    long_diff_bps = abs(mark_price - float(order_dict[long_cl_ord_id]["price"])) / mark_price * 10000 if long_cl_ord_id else None
+                    short_diff_bps = abs(mark_price - float(order_dict[short_cl_ord_id]["price"])) / mark_price * 10000 if short_cl_ord_id else None
+                    print(f'pos:{POSITION}, mark_price: {mark_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}')
                     for order in order_dict.values():
                         if order["status"] == "filled":
                             cancel_orders(auth, [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid and cid != order["cl_ord_id"]])
@@ -106,13 +106,13 @@ def main():
                         short_cl_ord_id = None
                         time.sleep(1)
                 else:   
-                    long_order_price = index_price * (1 - BPS / 10000)
+                    long_order_price = mark_price * (1 - BPS / 10000)
                     long_order_price = format(long_order_price, ".2f")
                     long_qty = POSITION / float(long_order_price)
                     long_qty = format(long_qty, ".4f")
                     long_cl_ord_id = create_order(auth, long_order_price, long_qty, "buy")
 
-                    short_order_price = index_price * (1 + BPS / 10000)
+                    short_order_price = mark_price * (1 + BPS / 10000)
                     short_order_price = format(short_order_price, ".2f")
                     short_qty = POSITION / float(short_order_price)
                     short_qty = format(short_qty, ".4f")
