@@ -1,7 +1,7 @@
 # standx-beggar
 
 
-1. install -r requirements.txt
+1. pip install -r requirements.txt
 
 2. set env STANDX_BEGGAR_ADDR & STANDX_BEGGAR_PK (private key)
 
@@ -16,4 +16,4 @@
 # beg.py 单边稳妥挂单版 10~30bps
 
 
-# beg2.py 双边5~10bps疯狂版
+# beg2.py 双边6~10bps竞赛 (开发中)
