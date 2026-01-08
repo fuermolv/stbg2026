@@ -27,13 +27,12 @@ def request_with_retry(
     backoff_base=0.4,         # seconds
 ):
     """
-    Retry only on connection-level failures (ConnectionError/Timeout/etc).
-    Does NOT change your existing HTTP status handling logic.
+    Retry on all types of failure, including connection-level failures and non-200 HTTP status codes.
     """
     last_exc = None
     for attempt in range(max_retries + 1):
         try:
-            return session.request(
+            response = session.request(
                 method,
                 url,
                 headers=headers,
@@ -41,6 +40,18 @@ def request_with_retry(
                 data=data,
                 timeout=timeout,
             )
+            # If the response status code is 200, return the response
+            if response.status_code == 200:
+                return response
+            else:
+                # For non-200 status codes, raise an exception to trigger retry logic
+                last_exc = Exception(f"Non-200 response: {response.status_code} {response.text}")
+                if attempt >= max_retries:
+                    raise last_exc
+                # exponential backoff + small jitter
+                sleep_s = backoff_base * (2 ** attempt) + random.uniform(0, 0.2)
+                print(f"Non-200 response received: {response.status_code}. Retrying in {sleep_s} seconds...")
+                time.sleep(sleep_s)
         except (requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout,
                 requests.exceptions.ChunkedEncodingError) as e:
@@ -49,6 +60,7 @@ def request_with_retry(
                 raise
             # exponential backoff + small jitter
             sleep_s = backoff_base * (2 ** attempt) + random.uniform(0, 0.2)
+            print(f"Connection error encountered: {e}. Retrying in {sleep_s} seconds...")
             time.sleep(sleep_s)
     # theoretically unreachable
     raise last_exc
@@ -167,26 +179,20 @@ def cancel_order(auth, cl_order_id):
     return resp.json()
 
 
-def query_order(auth, cl_ord_id, max_retry=3):
+def query_order(auth, cl_ord_id):
     url = f"{BASE_URL}/api/query_order"
     params = {"cl_ord_id": cl_ord_id}
-    for i in range(max_retry):
-        resp = request_with_retry(
-            session,
-            "GET",
-            url,
-            headers=get_headers(auth),
-            params=params,
-        )
-        if resp.status_code == 200:
-            return resp.json()
-        if resp.status_code == 404:
-            if i < max_retry - 1:
-                time.sleep(1)
-                continue
-            raise Exception(f"query_order not found after {max_retry} retries: {resp.text}")
-        # 其他状态码不重试
-        raise Exception(f"query_order failed: {resp.status_code} {resp.text}")
+    resp = request_with_retry(
+        session,
+        "GET",
+        url,
+        headers=get_headers(auth),
+        params=params,
+    )
+    if resp.status_code != 200:
+        raise Exception(f"query_position failed: {resp.status_code} {resp.text}")
+    return resp.json()
+
 
 def query_positions(auth):
     url = f"{BASE_URL}/api/query_positions"

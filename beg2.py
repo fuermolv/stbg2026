@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from backoff import CancelBackoff
 from config import POSITION
 import signal
+import sys
 
 BPS = 8.5
 MIN_BPS = 7
@@ -132,6 +133,9 @@ def main():
                 if _should_exit:
                     break
                 time.sleep(0.05)
+        except Exception as e:
+            print(f"sleep 60 Exception in main loop: {e}")
+            time.sleep(60)
         finally:
             cl_ord_ids = [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid]
             if cl_ord_ids:

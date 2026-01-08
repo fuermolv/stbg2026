@@ -92,6 +92,9 @@ def main():
             if _should_exit:
                 break
             time.sleep(0.05)
+    except Exception as e:
+        print(f"sleep 60 Exception in main loop: {e}")
+        time.sleep(60)
     finally:
         if cl_ord_id:
             print("cleaning up open order")
