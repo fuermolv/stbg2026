@@ -167,14 +167,26 @@ def cancel_order(auth, cl_order_id):
     return resp.json()
 
 
-def query_order(auth, cl_ord_id):
+def query_order(auth, cl_ord_id, max_retry=3):
     url = f"{BASE_URL}/api/query_order"
     params = {"cl_ord_id": cl_ord_id}
-    resp = request_with_retry(session, "GET", url, headers=get_headers(auth), params=params)
-    if resp.status_code != 200:
-        raise Exception(f"query_open_orders failed: {resp.status_code} {resp.text}")
-    return resp.json()
-
+    for i in range(max_retry):
+        resp = request_with_retry(
+            session,
+            "GET",
+            url,
+            headers=get_headers(auth),
+            params=params,
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        if resp.status_code == 404:
+            if i < max_retry - 1:
+                time.sleep(1)
+                continue
+            raise Exception(f"query_order not found after {max_retry} retries: {resp.text}")
+        # 其他状态码不重试
+        raise Exception(f"query_order failed: {resp.status_code} {resp.text}")
 
 def query_positions(auth):
     url = f"{BASE_URL}/api/query_positions"
