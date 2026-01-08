@@ -71,7 +71,10 @@ def main():
                 order = query_order(auth, cl_ord_id)
                 diff_bps = abs(mark_price - float(order["price"])) / mark_price * 10000
                 print(f'pos:{POSITION} order pos: {order["qty"]} status: {order["status"]}, mark_price: {mark_price}, order price: {order["price"]},  diff_bps: {diff_bps}')
-                if order["status"] == "filled":
+                positions = query_positions(auth)
+                if [p for p in positions if p['qty'] and float(p['qty']) != 0]:
+                    print("existing position detected, canceling order and cleaning position")
+                    cancel_order(auth, cl_ord_id)
                     clean_position(auth)
                     cl_ord_id = None
                     print("position cleaned, placing new orders after 120 seconds")

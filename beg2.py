@@ -26,6 +26,11 @@ signal.signal(signal.SIGINT, _on_term)
 
 
 
+
+
+
+
+
 def clean_position(auth):
     positions = query_positions(auth)
     for position in positions:
@@ -102,15 +107,16 @@ def main():
                     long_diff_bps = abs(mark_price - float(order_dict[long_cl_ord_id]["price"])) / mark_price * 10000 if long_cl_ord_id else None
                     short_diff_bps = abs(mark_price - float(order_dict[short_cl_ord_id]["price"])) / mark_price * 10000 if short_cl_ord_id else None
                     print(f'pos:{POSITION}, mark_price: {mark_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}')
-                    for order in order_dict.values():
-                        if order["status"] == "filled":
-                            cancel_orders(auth, [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid and cid != order["cl_ord_id"]])
-                            print("position filled, cleaning position")
-                            clean_position(auth)
-                            long_cl_ord_id = None
-                            short_cl_ord_id = None
-                            print("position cleaned, placing new orders after 120 seconds")
-                            time.sleep(120)
+                    positions = query_positions(auth)
+                    if [p for p in positions if p['qty'] and float(p['qty']) != 0]:
+                        print("existing position detected, canceling orders and cleaning position")
+                        cancel_orders(auth, [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid])
+                        print("position filled, cleaning position")
+                        clean_position(auth)
+                        long_cl_ord_id = None
+                        short_cl_ord_id = None
+                        print("position cleaned, placing new orders after 120 seconds")
+                        time.sleep(120)
                     if long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS:
                         cancel_orders(auth, [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid])
                         long_cl_ord_id = None
