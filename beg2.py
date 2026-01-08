@@ -8,7 +8,7 @@ from backoff import CancelBackoff
 
 POSITION = 50000
 BPS = 8.5
-MIN_BPS = 7.5
+MIN_BPS = 7
 MAX_BPS = 10
 
 
