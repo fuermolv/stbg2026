@@ -24,7 +24,7 @@ def clean_position(auth, qty, price):
             time.sleep(1)
     except Exception as e:
         print("maker clean position exception, using taker to clean position")
-        taker_clean_position(auth, qty)
+        taker_clean_position(auth, qty, clean_side)
         raise e
     print("maker clean position timeout, canceling order")
     cancel_order(auth, cl_ord_id)
@@ -42,7 +42,7 @@ def main():
     cl_ord_id = None
     try:
         while True:
-            index_price = float(get_price(auth)["index_price"])
+            index_price = float(get_price(auth)["mid_price"])
             if cl_ord_id:
                 order = query_order(auth, cl_ord_id)
                 diff_bps = abs(index_price - float(order["price"])) / index_price * 10000

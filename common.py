@@ -132,3 +132,12 @@ def query_order(auth, cl_ord_id):
     if resp.status_code != 200:
         raise Exception(f"query_open_orders failed: {resp.status_code} {resp.text}")
     return resp.json()
+
+
+def query_positions(auth):
+    url = f"{BASE_URL}/api/query_positions"
+    params = {"symbol": PAIR}
+    resp = requests.get(url, headers=get_headers(auth), params=params)
+    if resp.status_code != 200:
+        raise Exception(f"query_position failed: {resp.status_code} {resp.text}")
+    return resp.json()
