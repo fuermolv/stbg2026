@@ -4,7 +4,7 @@ from collections import deque
 class CancelBackoff:
 
     
-    def __init__(self, base_seconds=1, step_seconds=3, window_seconds=30, max_seconds=None):
+    def __init__(self, base_seconds=0, step_seconds=3, window_seconds=30, max_seconds=None):
         self.base = float(base_seconds)
         self.step = float(step_seconds)
         self.window = float(window_seconds)
