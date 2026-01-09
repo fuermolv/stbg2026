@@ -101,11 +101,13 @@ def main():
         }
         long_cl_ord_id = None
         short_cl_ord_id = None
+        order_dict = None
         try:
             while True:
                 mark_price = float(get_price(auth)["mark_price"])
                 if long_cl_ord_id and short_cl_ord_id:
-                    order_dict = query_orders(auth, [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid])
+                    if not order_dict:
+                        order_dict = query_orders(auth, [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid])
                     long_diff_bps = abs(mark_price - float(order_dict[long_cl_ord_id]["price"])) / mark_price * 10000 if long_cl_ord_id else None
                     short_diff_bps = abs(mark_price - float(order_dict[short_cl_ord_id]["price"])) / mark_price * 10000 if short_cl_ord_id else None
                     print(f'pos:{POSITION}, mark_price: {mark_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}')
@@ -117,12 +119,14 @@ def main():
                         clean_position(auth)
                         long_cl_ord_id = None
                         short_cl_ord_id = None
+                        order_dict = None
                         print("position cleaned, placing new orders after 900 seconds")
                         time.sleep(900)
                     if long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS:
                         cancel_orders(auth, [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid])
                         long_cl_ord_id = None
                         short_cl_ord_id = None
+                        order_dict = None
                         next_sleep = backoff.next_sleep()
                         print(f"bps out of range, canceling orders, sleeping for {next_sleep} seconds")
                         time.sleep(next_sleep)

@@ -69,11 +69,13 @@ def main():
             'signing_key': SigningKey(bytes.fromhex(auth_json['signing_key'])),
         }
     cl_ord_id = None
+    order = None
     try:
         while True:
             mark_price = float(get_price(auth)["mark_price"])
             if cl_ord_id:
-                order = query_order(auth, cl_ord_id)
+                if not order:
+                    order = query_order(auth, cl_ord_id)
                 diff_bps = abs(mark_price - float(order["price"])) / mark_price * 10000
                 print(f'pos:{POSITION} order pos: {order["qty"]} status: {order["status"]}, mark_price: {mark_price}, order price: {order["price"]},  diff_bps: {diff_bps}')
                 positions = query_positions(auth)
@@ -82,11 +84,13 @@ def main():
                     cancel_order(auth, cl_ord_id)
                     clean_position(auth)
                     cl_ord_id = None
+                    order = None
                     print("position cleaned, placing new orders after 900 seconds")
                     time.sleep(900)
                 if diff_bps <= MIN_BPS or diff_bps >= MAX_BPS:
                     cancel_order(auth, cl_ord_id)
                     cl_ord_id = None
+                    order = None
                     next_sleep = backoff.next_sleep()
                     print(f"bps out of range, canceling order, sleeping for {next_sleep} seconds")
                     time.sleep(next_sleep)
