@@ -101,13 +101,13 @@ def main():
                     if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
                         print(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
                         time.sleep(10)
-                        continue
-                    sign = 1 if SIDE == "sell" else -1
-                    order_price = mark_price * (1 + sign * BPS / 10000)
-                    order_price = format(order_price, ".2f")
-                    qty = POSITION / float(order_price)
-                    qty = format(qty, ".4f")
-                    cl_ord_id = create_order(auth, order_price, qty, SIDE)
+                    else:
+                        sign = 1 if SIDE == "sell" else -1
+                        order_price = mark_price * (1 + sign * BPS / 10000)
+                        order_price = format(order_price, ".2f")
+                        qty = POSITION / float(order_price)
+                        qty = format(qty, ".4f")
+                        cl_ord_id = create_order(auth, order_price, qty, SIDE)
                 if _should_exit:
                     break
                 time.sleep(0.05)

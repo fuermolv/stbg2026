@@ -137,17 +137,17 @@ def main():
                     if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
                         print(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
                         time.sleep(10)
-                        continue
-                    long_order_price = mark_price * (1 - BPS / 10000)
-                    long_order_price = format(long_order_price, ".2f")
-                    long_qty = POSITION / float(long_order_price)
-                    long_qty = format(long_qty, ".4f")
-                    long_cl_ord_id = create_order(auth, long_order_price, long_qty, "buy")
-                    short_order_price = mark_price * (1 + BPS / 10000)
-                    short_order_price = format(short_order_price, ".2f")
-                    short_qty = POSITION / float(short_order_price)
-                    short_qty = format(short_qty, ".4f")
-                    short_cl_ord_id = create_order(auth, short_order_price, short_qty, "sell")
+                    else:
+                        long_order_price = mark_price * (1 - BPS / 10000)
+                        long_order_price = format(long_order_price, ".2f")
+                        long_qty = POSITION / float(long_order_price)
+                        long_qty = format(long_qty, ".4f")
+                        long_cl_ord_id = create_order(auth, long_order_price, long_qty, "buy")
+                        short_order_price = mark_price * (1 + BPS / 10000)
+                        short_order_price = format(short_order_price, ".2f")
+                        short_qty = POSITION / float(short_order_price)
+                        short_qty = format(short_qty, ".4f")
+                        short_cl_ord_id = create_order(auth, short_order_price, short_qty, "sell")
                 if _should_exit:
                     break
                 time.sleep(0.05)
