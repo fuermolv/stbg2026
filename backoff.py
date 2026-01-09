@@ -2,16 +2,9 @@ import time
 from collections import deque
 
 class CancelBackoff:
-    """
-    对外只有一个方法：next_sleep()
-    每调用一次，表示发生了一次 cancel，并返回本次应 sleep 的秒数。
 
-    规则：
-    - 基准 sleep = base_seconds（默认 1s）
-    - 在 window_seconds（默认 30s）内，每多一次 cancel，额外 + step_seconds（默认 3s）
-    - 超出窗口的 cancel 自动失效
-    """
-    def __init__(self, base_seconds=1, step_seconds=3, window_seconds=30, max_seconds=None):
+    
+    def __init__(self, base_seconds=1, step_seconds=4, window_seconds=60, max_seconds=None):
         self.base = float(base_seconds)
         self.step = float(step_seconds)
         self.window = float(window_seconds)

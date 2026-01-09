@@ -117,8 +117,8 @@ def main():
                         clean_position(auth)
                         long_cl_ord_id = None
                         short_cl_ord_id = None
-                        print("position cleaned, placing new orders after 120 seconds")
-                        time.sleep(120)
+                        print("position cleaned, placing new orders after 900 seconds")
+                        time.sleep(900)
                     if long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS:
                         cancel_orders(auth, [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid])
                         long_cl_ord_id = None
