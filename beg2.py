@@ -102,8 +102,9 @@ def main():
         long_cl_ord_id = None
         short_cl_ord_id = None
         order_dict = None
-        try:
-            while True:
+    try:
+        while True:
+            try:
                 mark_price = float(get_price(auth)["mark_price"])
                 if long_cl_ord_id and short_cl_ord_id:
                     if not order_dict:
@@ -150,16 +151,21 @@ def main():
                 if _should_exit:
                     break
                 time.sleep(0.05)
-        except Exception as e:
-            print(f"sleep 60 Exception in main loop: {e}")
-            time.sleep(60)
-        finally:
-            cl_ord_ids = [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid]
-            if cl_ord_ids:
-                print("cleaning up open orders")
-                cancel_orders(auth, cl_ord_ids)
-            clean_position(auth)
-  
+            except Exception as e:
+                print(f"Exception in main loop: {e}, cleaning up")
+                cl_ord_ids = [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid]
+                if cl_ord_ids:
+                    print("cleaning up open orders")
+                    cancel_orders(auth, cl_ord_ids)
+                clean_position(auth)
+                print("cleanup done, sleeping for 60 seconds before next iteration")
+                time.sleep(60)
+    finally:
+        cl_ord_ids = [cid for cid in [long_cl_ord_id, short_cl_ord_id] if cid]
+        if cl_ord_ids:
+            print("cleaning up open orders")
+            cancel_orders(auth, cl_ord_ids)
+    clean_position(auth)
     
 
 

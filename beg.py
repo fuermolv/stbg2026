@@ -72,47 +72,53 @@ def main():
     order = None
     try:
         while True:
-            mark_price = float(get_price(auth)["mark_price"])
-            if cl_ord_id:
-                if not order:
-                    order = query_order(auth, cl_ord_id)
-                diff_bps = abs(mark_price - float(order["price"])) / mark_price * 10000
-                print(f'pos:{POSITION} order pos: {order["qty"]} status: {order["status"]}, mark_price: {mark_price}, order price: {order["price"]},  diff_bps: {diff_bps}')
-                positions = query_positions(auth)
-                if [p for p in positions if p['qty'] and float(p['qty']) != 0]:
-                    print("existing position detected, canceling order and cleaning position")
-                    cancel_order(auth, cl_ord_id)
+            try:
+                mark_price = float(get_price(auth)["mark_price"])
+                if cl_ord_id:
+                    if not order:
+                        order = query_order(auth, cl_ord_id)
+                    diff_bps = abs(mark_price - float(order["price"])) / mark_price * 10000
+                    print(f'pos:{POSITION} order pos: {order["qty"]} status: {order["status"]}, mark_price: {mark_price}, order price: {order["price"]},  diff_bps: {diff_bps}')
+                    positions = query_positions(auth)
+                    if [p for p in positions if p['qty'] and float(p['qty']) != 0]:
+                        print("existing position detected, canceling order and cleaning position")
+                        cancel_order(auth, cl_ord_id)
+                        clean_position(auth)
+                        cl_ord_id = None
+                        order = None
+                        print("position cleaned, placing new orders after 900 seconds")
+                        time.sleep(900)
+                    if diff_bps <= MIN_BPS or diff_bps >= MAX_BPS:
+                        cancel_order(auth, cl_ord_id)
+                        cl_ord_id = None
+                        order = None
+                        next_sleep = backoff.next_sleep()
+                        print(f"bps out of range, canceling order, sleeping for {next_sleep} seconds")
+                        time.sleep(next_sleep)
+                else:
+                    current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
+                    current_hour = current_time.hour
+                    if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
+                        print(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
+                        time.sleep(10)
+                        continue
+                    sign = 1 if SIDE == "sell" else -1
+                    order_price = mark_price * (1 + sign * BPS / 10000)
+                    order_price = format(order_price, ".2f")
+                    qty = POSITION / float(order_price)
+                    qty = format(qty, ".4f")
+                    cl_ord_id = create_order(auth, order_price, qty, SIDE)
+                if _should_exit:
+                    break
+                time.sleep(0.05)
+            except Exception as e:
+                    print(f"Exception in main loop: {e}, cleaning up")
+                    if cl_ord_id:
+                        print("cleaning up open order")
+                        cancel_order(auth, cl_ord_id)
                     clean_position(auth)
-                    cl_ord_id = None
-                    order = None
-                    print("position cleaned, placing new orders after 900 seconds")
-                    time.sleep(900)
-                if diff_bps <= MIN_BPS or diff_bps >= MAX_BPS:
-                    cancel_order(auth, cl_ord_id)
-                    cl_ord_id = None
-                    order = None
-                    next_sleep = backoff.next_sleep()
-                    print(f"bps out of range, canceling order, sleeping for {next_sleep} seconds")
-                    time.sleep(next_sleep)
-            else:
-                current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
-                current_hour = current_time.hour
-                if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
-                    print(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
-                    time.sleep(10)
-                    continue
-                sign = 1 if SIDE == "sell" else -1
-                order_price = mark_price * (1 + sign * BPS / 10000)
-                order_price = format(order_price, ".2f")
-                qty = POSITION / float(order_price)
-                qty = format(qty, ".4f")
-                cl_ord_id = create_order(auth, order_price, qty, SIDE)
-            if _should_exit:
-                break
-            time.sleep(0.05)
-    except Exception as e:
-        print(f"sleep 60 Exception in main loop: {e}")
-        time.sleep(60)
+                    print("sleeping for 60 seconds before restarting main loop")
+                    time.sleep(60)
     finally:
         if cl_ord_id:
             print("cleaning up open order")
