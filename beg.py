@@ -112,15 +112,15 @@ def main():
                     break
                 time.sleep(0.05)
             except Exception as e:
-                    print(f"Exception in main loop: {e}, cleaning up")
-                    if cl_ord_id:
-                        print("cleaning up open order")
-                        cancel_order(auth, cl_ord_id)
-                    cl_ord_id = None
-                    order = None
-                    clean_position(auth)
-                    print("sleeping for 60 seconds before restarting main loop")
-                    time.sleep(60)
+                print(f"Exception in main loop: {e}, cleaning up")
+                if cl_ord_id:
+                    print("cleaning up open order")
+                    cancel_order(auth, cl_ord_id)
+                cl_ord_id = None
+                order = None
+                clean_position(auth)
+                print("sleeping for 60 seconds before restarting main loop")
+                time.sleep(60)
     finally:
         if cl_ord_id:
             print("cleaning up open order")

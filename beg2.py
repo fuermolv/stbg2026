@@ -11,8 +11,8 @@ from zoneinfo import ZoneInfo
 from datetime import datetime
 from config import SKIP_HOUR_START, SKIP_HOUR_END
 
-BPS = 8.5
-MIN_BPS = 7
+BPS = 9
+MIN_BPS = 8
 MAX_BPS = 10
 
 
