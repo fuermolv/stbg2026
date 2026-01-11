@@ -45,8 +45,8 @@ class StandXWSBase:
     def _on_error(self, ws, error):
         print(f"{self.name} ws error:", error)
 
-    def _on_close(self, ws, *_):
-        print(f"{self.name} ws closed")
+    def _on_close(self, ws, close_status_code, close_msg):
+        print(f"{self.name} ws closed: code={close_status_code} msg={close_msg}")
 
     def _on_open(self, ws):
         raise NotImplementedError()
@@ -125,8 +125,38 @@ class StandXPositionWS(StandXWSBase):
             print("position ws other message:", msg)
 
 
-st_price_dict = None
-positions = None
+
+
+
+class BinancePriceWS(StandXWSBase):
+    """
+    Binance spot bookTicker via raw stream URL.
+
+    URL format:
+      wss://stream.binance.com:9443/ws/<streamName>
+
+    Example:
+      wss://stream.binance.com:9443/ws/btcusdt@bookTicker
+    """
+
+    def __init__(self, setter, symbol="btcusdt", reconnect_sleep=1):
+        self.symbol = symbol.lower()
+        self.setter = setter
+        ws_url = "wss://data-stream.binance.vision/ws/btcusdt@bookTicker"
+        super().__init__("binance_book_ticker", ws_url, reconnect_sleep)
+
+    def _on_open(self, ws):
+        print("binance ws opened")
+
+    def _on_message(self, ws, message):
+        # 直接打印，验证是否能收到
+        msg = json.loads(message)
+        self.setter(msg)
+
+
+
+
+bn_price = None
 
 if __name__ == "__main__":
     with open("standx_beggar_auth.json", "r") as f:
@@ -136,25 +166,25 @@ if __name__ == "__main__":
             'signing_key': SigningKey(bytes.fromhex(auth_json['signing_key'])),
         }
 
-    def set_price(p):
-        global st_price_dict
-        st_price_dict = p
+    def ser_bn_price(msg):
+        global bn_price
+        mid_price = (float(msg['a']) + float(msg['b'])) / 2
+        bn_price = format(mid_price, '.4f')
 
-    def set_position(p):
-        global positions
-        positions = p
 
-    ws = StandXPriceWS(set_price)
+    # ws = StandXPriceWS(set_price)
+    # ws.start_in_thread()
+
+    # pos_ws = StandXPositionWS(
+    #     set_position,
+    #     access_token=auth['access_token'],
+    # )
+    # pos_ws.start_in_thread()
+    ws = BinancePriceWS(setter=ser_bn_price)
     ws.start_in_thread()
-
-    pos_ws = StandXPositionWS(
-        set_position,
-        access_token=auth['access_token'],
-    )
-    pos_ws.start_in_thread()
 
     while True:
         time.sleep(1)
         print('----------------------------------')
-        print("price ws data:", st_price_dict)
-        print("position ws data:", positions)
+        print(bn_price)
+     
