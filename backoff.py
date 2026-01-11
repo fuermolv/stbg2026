@@ -3,7 +3,7 @@ from collections import deque
 
 class CancelBackoff:
 
-    def __init__(self, base_seconds=2, factor=2.5, window_seconds=300, max_seconds=300):
+    def __init__(self, base_seconds=2, factor=2, window_seconds=120, max_seconds=None):
         self.base = float(base_seconds)  # 初始等待时间
         self.factor = float(factor)  # 指数退避的倍数
         self.window = float(window_seconds)  # 窗口时间
