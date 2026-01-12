@@ -108,7 +108,7 @@ def main(position, auth):
             }
         if _should_exit:
             break
-        time.sleep(0.1)
+        time.sleep(0.05)
 
 
 
