@@ -2,7 +2,7 @@
 import json
 import time
 
-from regex import T
+from regex import E, T
 from nacl.signing import SigningKey
 from backoff import CancelBackoff
 import signal
@@ -128,6 +128,8 @@ if __name__ == "__main__":
     while True:
         try:
             main(args.position, auth)
+        except Exception as e:
+            print(f"Exception in beggar: {e} traceback: {e.__traceback__}")
         finally:
             clean_orders(auth)
             clean_positions(auth)
