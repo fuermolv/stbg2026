@@ -14,18 +14,23 @@ PAIR = "BTC-USD"
 # --------- NEW: a shared session + retry wrapper (minimal intrusion) ---------
 session = requests.Session()
 
+import time
+import random
+import requests
+from datetime import datetime, timezone
+
 def request_with_retry(
     session,
     method,
     url,
     *,
     headers=None,
-    headers_factory=None,   # NEW: lazily build headers per attempt
+    headers_factory=None,   # lazily build headers per attempt
     params=None,
     data=None,
-    timeout=(3.0, 10.0),      # (connect_timeout, read_timeout)
+    timeout=(3.0, 10.0),    # (connect_timeout, read_timeout)
     max_retries=5,
-    backoff_base=0.2,         # seconds
+    backoff_base=0.2,       # seconds
 ):
     """
     Retry on all types of failure, including connection-level failures and non-200 HTTP status codes.
@@ -36,8 +41,23 @@ def request_with_retry(
     if headers is not None and headers_factory is not None:
         raise ValueError("Provide only one of `headers` or `headers_factory`")
 
+    def _now_str():
+        # 统一打印为 ISO8601（含时区）；如果你更想用本地时间，把 timezone.utc 去掉即可
+        return datetime.now(timezone.utc).astimezone().isoformat(timespec="milliseconds")
+
+    def _log_failure(*, ts, duration_s, status_code, message):
+        # 按你要求：请求持续时间，返回码，返回消息，请求时间点
+        print(
+            f"[request_with_retry] ts={ts} "
+            f"dur={duration_s:.3f}s "
+            f"status={status_code} "
+            f"msg={message}"
+        )
+
     last_exc = None
     for attempt in range(max_retries + 1):
+        ts = _now_str()
+        t0 = time.perf_counter()
         try:
             # regenerate headers each attempt if factory provided
             req_headers = headers_factory() if headers_factory is not None else headers
@@ -48,36 +68,62 @@ def request_with_retry(
                 headers=req_headers,
                 params=params,
                 data=data,
-                timeout=timeout,
+                # timeout=timeout,
             )
+            duration_s = time.perf_counter() - t0
 
             # If the response status code is 200, return the response
             if response.status_code == 200:
                 return response
             else:
+                # 失败：打印耗时/状态码/消息/时间点
+                # message 用 response.text（必要时可自行截断，避免太长）
+                _log_failure(
+                    ts=ts,
+                    duration_s=duration_s,
+                    status_code=response.status_code,
+                    message=response.text,
+                )
+
                 if response.status_code == 404:
                     # For 404, no point in retrying
                     raise Exception(f"Resource not found: {url}")
+
                 # For non-200 status codes, raise an exception to trigger retry logic
                 last_exc = Exception(f"Non-200 response: {response.status_code} {response.text}")
                 if attempt >= max_retries:
                     raise last_exc
+
                 # exponential backoff + small jitter
                 sleep_s = backoff_base * (2 ** attempt) + random.uniform(0, 0.2)
                 print(f"Non-200 response received: {response.status_code}. Retrying in {sleep_s} seconds...")
                 time.sleep(sleep_s)
+
         except (requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout,
                 requests.exceptions.ChunkedEncodingError) as e:
+            duration_s = time.perf_counter() - t0
             last_exc = e
+
+            # 失败：打印耗时/状态码/消息/时间点（此类异常没有 HTTP 返回码）
+            _log_failure(
+                ts=ts,
+                duration_s=duration_s,
+                status_code=None,
+                message=repr(e),
+            )
+
             if attempt >= max_retries:
                 raise
+
             # exponential backoff + small jitter
             sleep_s = backoff_base * (2 ** attempt) + random.uniform(0, 0.2)
             print(f"Connection error encountered: {e}. Retrying in {sleep_s} seconds...")
             time.sleep(sleep_s)
+
     # theoretically unreachable
     raise last_exc
+
 # ---------------------------------------------------------------------------
 
 
