@@ -88,6 +88,7 @@ def main(position, auth):
             current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
             current_hour = current_time.hour
             if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
+                cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
                 print(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
                 time.sleep(10)
             long_order = {
