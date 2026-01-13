@@ -91,6 +91,7 @@ def main(position, auth):
                 cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
                 print(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
                 time.sleep(10)
+                continue
             long_order = {
                 'price': format(mark_price * (1 - BPS / 10000), ".2f"),
                 'qty': format(position / (mark_price * (1 - BPS / 10000)), ".4f"),

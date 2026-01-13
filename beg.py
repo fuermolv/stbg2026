@@ -89,6 +89,7 @@ def main(position, auth):
                 cancel_orders(auth, [order_dict['cl_ord_id']] if order_dict['cl_ord_id'] else [])
                 print(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
                 time.sleep(10)
+                continue
             if SIDE == "buy":
                 order = {
                     'price': format(mark_price * (1 - BPS / 10000), ".2f"),
