@@ -134,5 +134,5 @@ if __name__ == "__main__":
             print("Exiting beggar")
         if _should_exit:
             break
-        print("Restarting beggar after 600 seconds")
-        time.sleep(600)
+        print("Restarting beggar after 120 seconds")
+        time.sleep(120)
