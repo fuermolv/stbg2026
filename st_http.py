@@ -30,7 +30,7 @@ def request_with_retry(
     data=None,
     timeout=(3.0, 10.0),    # (connect_timeout, read_timeout)
     max_retries=5,
-    backoff_base=0.2,       # seconds
+    backoff_base=0.4,       # seconds
 ):
     """
     Retry on all types of failure, including connection-level failures and non-200 HTTP status codes.
@@ -68,7 +68,7 @@ def request_with_retry(
                 headers=req_headers,
                 params=params,
                 data=data,
-                # timeout=timeout,
+                timeout=timeout,
             )
             duration_s = time.perf_counter() - t0
 
