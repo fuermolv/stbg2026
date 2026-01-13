@@ -170,6 +170,8 @@ def taker_clean_position(auth, qty, side):
 
 # https://docs.standx.com/standx-api/perps-http#cancel-multiple-orders
 def cancel_orders(auth, cl_ord_ids):
+    if not cl_ord_ids:
+        return 
     url = f"{BASE_URL}/api/cancel_orders"
     data = {
         "cl_ord_id_list": cl_ord_ids,
