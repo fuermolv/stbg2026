@@ -194,7 +194,7 @@ def create_order(auth, price, qty, side):
         session,
         "POST",
         url,
-        # timeout=(0.5, 1.0),
+        timeout=(0.5, 1.0),
         max_retries=0,
         headers_factory=lambda: get_headers(auth, payload_str),
         data=payload_str,
