@@ -33,6 +33,7 @@ signal.signal(signal.SIGINT, _on_term)
 BPS = 8.5
 MIN_BPS = 7
 MAX_BPS = 10
+THROTTLE_BPS = 12
 
 _should_exit = False
 st_price_dict = None
@@ -91,6 +92,9 @@ def main(position, auth):
                 next_sleep = backoff.next_sleep()
                 logger.info(f"bps out of range, canceling orders, sleeping for {next_sleep} seconds")
                 time.sleep(next_sleep)
+                if abs(long_diff_bps) > THROTTLE_BPS or abs(short_diff_bps) > THROTTLE_BPS:
+                    logger.info(f"bps out of throttle range {THROTTLE_BPS}, sleeping for 300 seconds")
+                    time.sleep(300)
         else:   
             current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
             current_hour = current_time.hour

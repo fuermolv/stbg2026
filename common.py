@@ -9,10 +9,6 @@ logger = logging.getLogger(__name__)
 
 
 
-
-
-
-
 def clean_positions(auth):
     positions = query_positions(auth)
     if not [position for position in positions if position['qty'] and float(position['qty']) != 0]:
