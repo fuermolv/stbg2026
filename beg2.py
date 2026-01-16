@@ -92,7 +92,7 @@ def main(position, auth):
                 if abs(long_diff_bps) > THROTTLE_BPS or abs(short_diff_bps) > THROTTLE_BPS:
                     logger.info(f"bps out of throttle range {THROTTLE_BPS}, canceling orders, sleeping for 300 seconds")
                     time.sleep(300)
-                    backoff.penalty(3)
+                    backoff.penalty(2)
                 else:
                     next_sleep = backoff.next_sleep()
                     logger.info(f"bps out of range, canceling orders, sleeping for {next_sleep} seconds")
