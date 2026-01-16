@@ -49,9 +49,9 @@ def main(position, auth):
 
     def set_position(p):
         global st_position
-        if p :
-            if p['qty'] and float(p['qty']) != 0:
-                logger.info(f"position update: {p}")
+        # if p :
+        #     if p['qty'] and float(p['qty']) != 0:
+        #         logger.info(f"position update: {p}")
         st_position = p
     
     ws = StandXPriceWS(set_price)
