@@ -92,6 +92,47 @@ class StandXPriceWS(StandXWSBase):
             logger.info("price ws other message:", msg)
 
 
+
+class StandXBookWS(StandXWSBase):
+    def __init__(
+        self,
+        setter,
+        symbol="BTC-USD",
+        ws_url="wss://perps.standx.com/ws-stream/v1",
+        reconnect_sleep=1,
+    ):
+        super().__init__("depth_book", ws_url, reconnect_sleep)
+        self.symbol = symbol
+        self.setter = setter
+
+    def get_mid_price(self, data):
+        best_ask = min(float(p) for p, _ in data['asks'])
+        best_bid = max(float(p) for p, _ in data['bids'])
+        mid_price = (best_ask + best_bid) / 2
+        return mid_price
+        
+   
+    def _on_open(self, ws):
+        ws.send(
+            json.dumps(
+                {
+                    "subscribe": {
+                        "channel": "depth_book",
+                        "symbol": self.symbol,
+                    }
+                }
+            )
+        )
+
+    def _on_message(self, ws, message):
+        msg = json.loads(message)
+        if msg.get("channel") == "depth_book":
+            data = msg.get("data")
+            self.setter(data)
+        else:
+            logger.info("book ws other message:", msg)
+
+
 class StandXPositionWS(StandXWSBase):
     def __init__(
         self,

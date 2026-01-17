@@ -6,7 +6,7 @@ from nacl.signing import SigningKey
 from backoff import CancelBackoff
 import signal
 import argparse
-from st_ws import StandXPriceWS, StandXPositionWS
+from st_ws import StandXBookWS, StandXPositionWS
 from st_http import cancel_orders
 from zoneinfo import ZoneInfo
 from datetime import datetime
@@ -36,16 +36,16 @@ MAX_BPS = 10
 THROTTLE_BPS = 12
 
 _should_exit = False
-st_price_dict = None
+st_book = None
 st_position = None
 
 
 def main(position, auth):
     backoff = CancelBackoff()
     logger.info(f"Starting beggar with position size: {position}")
-    def set_price(p):
-        global st_price_dict
-        st_price_dict = p
+    def set_book(b):
+        global st_book
+        st_book = b
 
     def set_position(p):
         global st_position
@@ -54,8 +54,8 @@ def main(position, auth):
         #         logger.info(f"position update: {p}")
         st_position = p
     
-    ws = StandXPriceWS(set_price)
-    ws.start_in_thread()
+    book_ws = StandXBookWS(set_book)
+    book_ws.start_in_thread()
 
     pos_ws = StandXPositionWS(set_position, access_token=auth['access_token'])
     pos_ws.start_in_thread()
@@ -64,11 +64,11 @@ def main(position, auth):
     last_price = 0
 
     while True:
-        if not st_price_dict:
+        if not st_book:
             logger.info("waiting for price data...")
             time.sleep(1)
             continue
-        mark_price = float(st_price_dict.get("mid_price", 0))
+        mark_price = book_ws.get_mid_price(st_book)
         if not mark_price:
             raise Exception("invalid mark price from ws")
         if order_dict:
