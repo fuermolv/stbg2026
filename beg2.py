@@ -37,6 +37,7 @@ THROTTLE_BPS = 12
 
 _should_exit = False
 st_book = None
+st_book_ts = 0
 st_position = None
 
 
@@ -45,7 +46,9 @@ def main(position, auth):
     logger.info(f"Starting beggar with position size: {position}")
     def set_book(b):
         global st_book
+        global st_book_ts
         st_book = b
+        st_book_ts = time.time()
 
     def set_position(p):
         global st_position
@@ -111,6 +114,7 @@ def main(position, auth):
                 logger.info(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
                 time.sleep(10)
                 continue
+            clean_orders(auth)
             long_order = {
                 'price': format(mark_price * (1 - BPS / 10000), ".2f"),
                 'qty': format(position / (mark_price * (1 - BPS / 10000)), ".4f"),
@@ -121,8 +125,12 @@ def main(position, auth):
                 'qty': format(position / (mark_price * (1 + BPS / 10000)), ".4f"),
                 'side': 'sell',
             }
-            orders = [long_order, short_order]
-            cl_ord_ids = create_orders(auth, orders)
+            time_diff = time.time() - st_book_ts
+            if  time_diff > 0.3:
+                logger.info(f"book data too old, skipping order creation, { time_diff }")
+                time.sleep(1)
+                continue
+            cl_ord_ids = create_orders(auth, [long_order, short_order])
             order_dict = {
                 'long_cl_ord_id': cl_ord_ids[0],
                 'short_cl_ord_id': cl_ord_ids[1],
