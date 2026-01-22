@@ -150,6 +150,7 @@ if __name__ == "__main__":
     while True:
         try:
             clean_orders(auth)
+            clean_positions(auth)
             main(args.position, auth)
         except Exception as e:
             logger.info(f"Exception in beggar: {e} traceback: {e.__traceback__}")
