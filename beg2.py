@@ -90,8 +90,10 @@ def main(position, auth):
                             break
                         time.sleep(1)
             if long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS:
+                raise ValueError("bps calculation error, check mark price and order prices")
                 cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
                 order_dict = None
+                clean_orders(auth)
                 if abs(long_diff_bps) > THROTTLE_BPS or abs(short_diff_bps) > THROTTLE_BPS:
                     logger.info(f"bps out of throttle range {THROTTLE_BPS}, canceling orders, sleeping for 300 seconds")
                     time.sleep(300)
@@ -105,7 +107,8 @@ def main(position, auth):
             current_hour = current_time.hour
             if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
                 if order_dict:
-                    cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
+                    clean_orders(auth)
+                    order_dict = None
                 logger.info(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
                 time.sleep(10)
                 continue
@@ -147,16 +150,19 @@ if __name__ == "__main__":
         }
     while True:
         try:
+            clean_orders(auth)
             main(args.position, auth)
         except Exception as e:
             logger.info(f"Exception in beggar: {e} traceback: {e.__traceback__}")
         finally:
             clean_orders(auth)
             clean_positions(auth)
-            logger.info("Exiting beggar")
         if _should_exit:
             break
-        logger.info("Restarting beggar after 120 seconds")
-        time.sleep(120)
+        for i in range(120):
+            time.sleep(1)
+            clean_orders(auth)
+            clean_positions(auth)
+            print(f"Restarting beggar in {120 - i} seconds...")
 
 
