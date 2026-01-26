@@ -81,7 +81,7 @@ def main(position, auth):
             short_diff_bps = (order_dict['short_price'] - best_ask_price) / best_ask_price * 10000 if order_dict['short_cl_ord_id'] else None
             if last_price != mark_price:
                 last_price = mark_price
-                logger.info(f'pos:{position}, mark_price: {mark_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}')
+                logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}')
            
             if st_position:
                 if st_position['qty'] and float(st_position['qty']) != 0:
