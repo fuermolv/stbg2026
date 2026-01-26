@@ -110,6 +110,11 @@ class StandXBookWS(StandXWSBase):
         best_bid = max(float(p) for p, _ in data['bids'])
         mid_price = (best_ask + best_bid) / 2
         return mid_price
+    
+    def get_best_ask_bid(self, data):
+        best_ask = min(float(p) for p, _ in data['asks'])
+        best_bid = max(float(p) for p, _ in data['bids'])
+        return best_ask, best_bid
         
    
     def _on_open(self, ws):

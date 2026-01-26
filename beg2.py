@@ -41,6 +41,7 @@ st_book_ts = 0
 st_position = None
 
 
+
 def main(position, auth):
     backoff = CancelBackoff()
     logger.info(f"Starting beggar with position size: {position}")
@@ -72,14 +73,16 @@ def main(position, auth):
             time.sleep(1)
             continue
         mark_price = book_ws.get_mid_price(st_book)
+        best_ask_price, best_bid_price = book_ws.get_best_ask_bid(st_book)
         if not mark_price:
             raise Exception("invalid mark price from ws")
         if order_dict:
-            long_diff_bps = abs(mark_price - order_dict['long_price']) / mark_price * 10000 if order_dict['long_cl_ord_id'] else None
-            short_diff_bps = abs(mark_price - order_dict['short_price']) / mark_price * 10000 if order_dict['short_cl_ord_id'] else None
+            long_diff_bps = (best_bid_price - order_dict['long_price']) / best_bid_price * 10000 if order_dict['long_cl_ord_id'] else None
+            short_diff_bps = (order_dict['short_price'] - best_ask_price) / best_ask_price * 10000 if order_dict['short_cl_ord_id'] else None
             if last_price != mark_price:
                 last_price = mark_price
                 logger.info(f'pos:{position}, mark_price: {mark_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}')
+           
             if st_position:
                 if st_position['qty'] and float(st_position['qty']) != 0:
                     logger.info("existing position detected, canceling orders and cleaning position")
