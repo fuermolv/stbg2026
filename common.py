@@ -1,10 +1,38 @@
+import os
 import time
+import requests
 from concurrent.futures import ThreadPoolExecutor
 
 from st_http import query_open_orders, query_positions, maker_clean_position, query_order, taker_clean_position, cancel_orders, create_order, query_open_orders
 import logging
 
 logger = logging.getLogger(__name__)
+
+LARK_URL = os.getenv("LARK_URL", "")
+
+
+def send_lark_message(message: str):
+    if not LARK_URL:
+        return
+    prfix = 'lyu'
+    full_message = f"{prfix}\n{message}"
+    headers = {
+        "Content-Type": "application/json"
+    }
+    data = {
+        "msg_type": "text", 
+        "content": {
+            "text": full_message
+        }
+    }
+    try:
+        response = requests.post(LARK_URL, json=data, headers=headers)
+        if response.status_code != 200:
+            logger.error(f"Failed to send message to Lark: {response.status_code}, {response.text}")
+        else:
+            logger.info("Message sent to Lark successfully")
+    except Exception as e:
+        logger.error(f"Exception occurred while sending message to Lark: {e}")
 
 
 
@@ -21,6 +49,7 @@ def clean_positions(auth):
         clean_side = 'buy' if side == 'sell' else 'sell'
         entry_price = float(position['entry_price'])
         price = entry_price
+        send_lark_message(f'Cleaning position: side={side}, qty={qty}, entry_price={entry_price}, maker price {price}, position_value={abs(float(position["position_value"]))}')
         logger.info(f'Cleaning position: side={side}, qty={qty}, entry_price={entry_price}, maker price {price}, position_value={abs(float(position["position_value"]))}')
         cl_ord_id = maker_clean_position(auth, price, qty, clean_side)
         for index in range(120):
@@ -32,11 +61,11 @@ def clean_positions(auth):
         logger.info("maker clean position timeout, canceling order")
         cancel_orders(auth, [cl_ord_id])
 
-
-    logger.info("using taker to clean position")
     STEP_QTY = 0.1
     positions = query_positions(auth)
     while [position for position in positions if position['qty'] and float(position['qty']) != 0]:
+        logger.info("using taker to clean position")
+        send_lark_message("using taker to clean position")
         for position in positions:
             if not position['qty'] or float(position['qty']) == 0:
                 continue
