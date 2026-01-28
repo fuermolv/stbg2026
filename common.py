@@ -94,11 +94,12 @@ def create_orders(auth, orders):
 
 
 def clean_orders(auth):
-    res = query_open_orders(auth)
-    orders = res.get("result", [])
-    cl_order_ids = [order["cl_ord_id"] for order in orders]
-    if cl_order_ids:
-        cancel_orders(auth, cl_order_ids)
-        logger.info(f"canceled all open orders: {cl_order_ids}")
-    else:
-        logger.info("no open orders to cancel")
+    while True:
+        orders = query_open_orders(auth).get("result", [])
+        cl_order_ids = [order["cl_ord_id"] for order in orders]
+        if cl_order_ids:
+            cancel_orders(auth, cl_order_ids)
+            logger.info(f"try canceled all open orders: {cl_order_ids}")
+        else:
+            logger.info("no open orders to cancel")
+            break

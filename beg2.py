@@ -107,15 +107,10 @@ def main(position, auth):
                 else:
                     next_sleep = backoff.next_sleep()
                     logger.info(f"bps out of range, canceling orders, sleeping for {next_sleep} seconds")
-                    for _i in range(int(next_sleep) * 2):
-                        res = query_open_orders(auth)
-                        orders = res.get("result", [])
-                        cl_order_ids = [order["cl_ord_id"] for order in orders]
-                        if cl_order_ids:
-                            clean_orders(auth)
+                    for _ in range(int(next_sleep)):
                         if st_position:
                             break
-                        time.sleep(0.5)
+                        time.sleep(1)
                 
         else:   
             current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
