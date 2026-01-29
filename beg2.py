@@ -87,7 +87,7 @@ def main(position, auth):
             if st_position:
                 if st_position['qty'] and float(st_position['qty']) != 0:
                     logger.info("existing position detected, canceling orders and cleaning position")
-                    cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])")
+                    cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
                     clean_positions(auth)
                     order_dict = None
                     logger.info("position cleaned, placing new orders after 900 seconds")
