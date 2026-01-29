@@ -7,7 +7,7 @@ from backoff import CancelBackoff
 import signal
 import argparse
 from st_ws import StandXBookWS, StandXPositionWS
-from st_http import cancel_orders, query_open_orders
+from st_http import cancel_orders
 from zoneinfo import ZoneInfo
 from datetime import datetime
 from config import SKIP_HOUR_START, SKIP_HOUR_END
@@ -76,6 +76,7 @@ def main(position, auth):
         best_ask_price, best_bid_price = book_ws.get_best_ask_bid(st_book)
         if not mark_price:
             raise Exception("invalid mark price from ws")
+        
         if order_dict:
             long_diff_bps = (best_bid_price - order_dict['long_price']) / best_bid_price * 10000 if order_dict['long_cl_ord_id'] else None
             short_diff_bps = (order_dict['short_price'] - best_ask_price) / best_ask_price * 10000 if order_dict['short_cl_ord_id'] else None
@@ -95,8 +96,10 @@ def main(position, auth):
                         if _should_exit:
                             break
                         time.sleep(1)
-            if long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS:
-                logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}')
+                continue
+            time_diff = time.time() - st_book_ts
+            if (long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS) or time_diff > 0.6:
+                logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, time_diff: {format(time_diff, ".3f")}')
                 cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
                 clean_orders(auth)
                 order_dict = None

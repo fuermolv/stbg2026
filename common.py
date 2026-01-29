@@ -3,7 +3,7 @@ import time
 import requests
 from concurrent.futures import ThreadPoolExecutor
 
-from st_http import query_open_orders, query_positions, maker_clean_position, query_order, taker_clean_position, cancel_orders, create_order, query_open_orders
+from st_http import query_orders, query_positions, maker_clean_position, taker_clean_position, cancel_orders, create_order
 import logging
 
 logger = logging.getLogger(__name__)
@@ -95,7 +95,7 @@ def create_orders(auth, orders):
 
 def clean_orders(auth):
     while True:
-        orders = query_open_orders(auth).get("result", [])
+        orders = query_orders(auth).get("result", [])
         cl_order_ids = [order["cl_ord_id"] for order in orders]
         if cl_order_ids:
             logger.info(f"try canceled all open orders: {cl_order_ids}")

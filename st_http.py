@@ -292,7 +292,7 @@ def query_order(auth, cl_ord_id):
     return resp.json()
 
 
-def query_open_orders(auth):
+def query_orders(auth):
     url = f"{BASE_URL}/api/query_open_orders"
     params = {"symbol": PAIR, "limit": 100}
     resp = request_with_retry(
@@ -303,7 +303,7 @@ def query_open_orders(auth):
         params=params,
     )
     if resp.status_code != 200:
-        raise Exception(f"query_open_orders failed: {resp.status_code} {resp.text}")
+        raise Exception(f"query_orders failed: {resp.status_code} {resp.text}")
     return resp.json()
 
 
