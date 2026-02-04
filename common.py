@@ -63,12 +63,12 @@ def clean_positions(auth):
             time.sleep(1)
         logger.info("maker clean position timeout, canceling order")
         cancel_orders(auth, [cl_ord_id])
-
+        
+    send_lark_message("using taker to clean position")
     STEP_QTY = 0.1
     positions = query_positions(auth)
     while [position for position in positions if position['qty'] and float(position['qty']) != 0]:
         logger.info("using taker to clean position")
-        send_lark_message("using taker to clean position")
         for position in positions:
             if not position['qty'] or float(position['qty']) == 0:
                 continue
