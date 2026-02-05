@@ -148,7 +148,7 @@ def main(position, auth):
             long_depeth = book_ws.depth_above_price(st_book, long_order['price'])
 
             if short_depeth < 2 or long_depeth < 2:
-                next_sleep = backoff.next_sleep
+                next_sleep = backoff.next_sleep()
                 logger.info(f"not enough depth to place orders, long_depth:{format(long_depeth, '.3f')}, short_depth:{format(short_depeth, '.3f')}, skipping order creation for {next_sleep} seconds")
                 time.sleep(next_sleep)
                 continue
