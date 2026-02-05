@@ -100,7 +100,7 @@ def main(position, auth):
             time_diff = time.time() - st_book_ts
             if (long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS) \
             or time_diff > 0.6 \
-            or (short_depeth < 2 or long_depeth < 2):
+            or (short_depeth < 1.5 or long_depeth < 1.5):
 
                 logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}, time_diff: {format(time_diff, ".3f")}')
                 cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
