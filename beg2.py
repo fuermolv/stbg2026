@@ -34,6 +34,7 @@ BPS = 8.5
 MIN_BPS = 7
 MAX_BPS = 10
 THROTTLE_BPS = 12
+MIN_DEP = 4
 
 _should_exit = False
 st_book = None
@@ -100,7 +101,7 @@ def main(position, auth):
             time_diff = time.time() - st_book_ts
             if (long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS) \
             or time_diff > 0.6 \
-            or (short_depeth < 1.5 or long_depeth < 1.5):
+            or (short_depeth < MIN_DEP or long_depeth < MIN_DEP):
 
                 logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}, time_diff: {format(time_diff, ".3f")}')
                 cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
@@ -147,7 +148,7 @@ def main(position, auth):
             short_depeth = book_ws.depth_below_price(st_book, short_order['price'])
             long_depeth = book_ws.depth_above_price(st_book, long_order['price'])
 
-            if short_depeth < 2 or long_depeth < 2:
+            if short_depeth < MIN_DEP or long_depeth < MIN_DEP:
                 next_sleep = backoff.next_sleep()
                 logger.info(f"not enough depth to place orders, long_depth:{format(long_depeth, '.3f')}, short_depth:{format(short_depeth, '.3f')}, skipping order creation for {next_sleep} seconds")
                 time.sleep(next_sleep)
