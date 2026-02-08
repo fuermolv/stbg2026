@@ -1,19 +1,25 @@
 
 import json
-import time
 import logging
+import time
 from nacl.signing import SigningKey
 from backoff import CancelBackoff
 import signal
 import argparse
-from st_ws import StandXPriceWS, StandXPositionWS
+from st_ws import StandXBookWS, StandXPositionWS
 from st_http import cancel_orders
 from zoneinfo import ZoneInfo
 from datetime import datetime
 from config import SKIP_HOUR_START, SKIP_HOUR_END
 from common import create_orders, clean_positions, clean_orders
 
+
+from logconf import setup_logging
+
+setup_logging()
 logger = logging.getLogger(__name__)
+
+
 
 
 def _on_term(signum, frame):
@@ -24,29 +30,37 @@ signal.signal(signal.SIGTERM, _on_term)
 signal.signal(signal.SIGINT, _on_term)
 
 
-BPS = 20
-MIN_BPS = 10
+BPS = 22.5
+MIN_BPS = 15
 MAX_BPS = 30
-SIDE = "sell"
+THROTTLE_BPS = 40
+MIN_DEP = 10
 
 _should_exit = False
-st_price_dict = None
+st_book = None
+st_book_ts = 0
 st_position = None
+
 
 
 def main(position, auth):
     backoff = CancelBackoff()
     logger.info(f"Starting beggar with position size: {position}")
-    def set_price(p):
-        global st_price_dict
-        st_price_dict = p
+    def set_book(b):
+        global st_book
+        global st_book_ts
+        st_book = b
+        st_book_ts = time.time()
 
     def set_position(p):
         global st_position
+        # if p :
+        #     if p['qty'] and float(p['qty']) != 0:
+        #         logger.info(f"position update: {p}")
         st_position = p
     
-    ws = StandXPriceWS(set_price)
-    ws.start_in_thread()
+    book_ws = StandXBookWS(set_book)
+    book_ws.start_in_thread()
 
     pos_ws = StandXPositionWS(set_position, access_token=auth['access_token'])
     pos_ws.start_in_thread()
@@ -55,23 +69,32 @@ def main(position, auth):
     last_price = 0
 
     while True:
-        if not st_price_dict:
+        if not st_book:
             logger.info("waiting for price data...")
             time.sleep(1)
             continue
-        mark_price = float(st_price_dict.get("mid_price", 0))
+        mark_price = book_ws.get_mid_price(st_book)
+        best_ask_price, best_bid_price = book_ws.get_best_ask_bid(st_book)
         if not mark_price:
             raise Exception("invalid mark price from ws")
+        
         if order_dict:
-            bps = abs(mark_price - order_dict['price']) / mark_price * 10000
+            # long_diff_bps = (best_bid_price - order_dict['long_price']) / best_bid_price * 10000 if order_dict['long_cl_ord_id'] else None
+            # short_diff_bps = (order_dict['short_price'] - best_ask_price) / best_ask_price * 10000 if order_dict['short_cl_ord_id'] else None
+            
+            # mark_price
+            long_diff_bps = (mark_price - order_dict['long_price']) / mark_price * 10000 if order_dict['long_cl_ord_id'] else None 
+            short_diff_bps = (order_dict['short_price'] - mark_price) / mark_price * 10000 if order_dict['short_cl_ord_id'] else None
+
+            short_depeth = book_ws.depth_below_price(st_book, order_dict['short_price'])
+            long_depeth = book_ws.depth_above_price(st_book, order_dict['long_price'])
             if last_price != mark_price:
                 last_price = mark_price
-                logger.info(f'pos:{position}, mark_price: {mark_price}, bps: {bps}')
+                logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}')
             if st_position:
                 if st_position['qty'] and float(st_position['qty']) != 0:
                     logger.info("existing position detected, canceling orders and cleaning position")
-                    clean_orders(auth)
-                    logger.info("position filled, cleaning position")
+                    cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
                     clean_positions(auth)
                     order_dict = None
                     logger.info("position cleaned, placing new orders after 900 seconds")
@@ -79,38 +102,71 @@ def main(position, auth):
                         if _should_exit:
                             break
                         time.sleep(1)
-            if bps < MIN_BPS or bps > MAX_BPS:
-                cancel_orders(auth, [order_dict['cl_ord_id']] if order_dict['cl_ord_id'] else [])
+                continue
+            time_diff = time.time() - st_book_ts
+            if (long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS) \
+            or time_diff > 0.6 \
+            or (short_depeth < MIN_DEP or long_depeth < MIN_DEP):
+
+                logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}, time_diff: {format(time_diff, ".3f")}')
+                cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
+                clean_orders(auth)
                 order_dict = None
-                next_sleep = backoff.next_sleep()
-                logger.info(f"bps out of range, canceling orders, sleeping for {next_sleep} seconds")
-                time.sleep(next_sleep)
+                if abs(long_diff_bps) > THROTTLE_BPS or abs(short_diff_bps) > THROTTLE_BPS:
+                    logger.info(f"bps out of throttle range {THROTTLE_BPS}, canceling orders, sleeping for 300 seconds")
+                    time.sleep(300)
+                    backoff.penalty(3)
+                else:
+                    next_sleep = backoff.next_sleep()
+                    logger.info(f"bps out of range, canceling orders, sleeping for {next_sleep} seconds")
+                    for _ in range(int(next_sleep)):
+                        if st_position:
+                            break
+                        time.sleep(1)
+                
         else:   
             current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
             current_hour = current_time.hour
-            if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
-                if order_dict:
-                    cancel_orders(auth, [order_dict['cl_ord_id']] if order_dict['cl_ord_id'] else [])
-                logger.info(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
-                time.sleep(10)
+            current_weekday = current_time.weekday()
+            if current_weekday < 5:  # Skip on weekends
+                if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
+                    if order_dict:
+                        clean_orders(auth)
+                        order_dict = None
+                    logger.info(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
+                    time.sleep(10)
+                    continue
+            clean_orders(auth)
+            long_order = {
+                'price': format(mark_price * (1 - BPS / 10000), ".2f"),
+                'qty': format(position / (mark_price * (1 - BPS / 10000)), ".4f"),
+                'side': 'buy',
+            }
+            short_order = {
+                'price': format(mark_price * (1 + BPS / 10000), ".2f"),
+                'qty': format(position / (mark_price * (1 + BPS / 10000)), ".4f"),
+                'side': 'sell',
+            }
+            time_diff = time.time() - st_book_ts
+            if  time_diff > 0.3:
+                logger.info(f"book data too old, skipping order creation, { time_diff }")
+                time.sleep(1)
                 continue
-            if SIDE == "buy":
-                order = {
-                    'price': format(mark_price * (1 - BPS / 10000), ".2f"),
-                    'qty': format(position / (mark_price * (1 - BPS / 10000)), ".4f"),
-                    'side': 'buy',
-                }
-            else:
-                order = {
-                    'price': format(mark_price * (1 + BPS / 10000), ".2f"),
-                    'qty': format(position / (mark_price * (1 + BPS / 10000)), ".4f"),
-                    'side': 'sell',
-                }
-            orders = [order]
-            cl_ord_ids = create_orders(auth, orders)
+            short_depeth = book_ws.depth_below_price(st_book, short_order['price'])
+            long_depeth = book_ws.depth_above_price(st_book, long_order['price'])
+
+            if short_depeth < MIN_DEP or long_depeth < MIN_DEP:
+                next_sleep = backoff.next_sleep()
+                logger.info(f"not enough depth to place orders, long_depth:{format(long_depeth, '.3f')}, short_depth:{format(short_depeth, '.3f')}, skipping order creation for {next_sleep} seconds")
+                time.sleep(next_sleep)
+                continue
+
+            cl_ord_ids = create_orders(auth, [long_order, short_order])
             order_dict = {
-                'cl_ord_id': cl_ord_ids[0],
-                'price': float(order['price']),
+                'long_cl_ord_id': cl_ord_ids[0],
+                'short_cl_ord_id': cl_ord_ids[1],
+                'long_price': float(long_order['price']),
+                'short_price': float(short_order['price']),
             }
         if _should_exit:
             break
@@ -132,14 +188,18 @@ if __name__ == "__main__":
         }
     while True:
         try:
+            clean_orders(auth)
+            clean_positions(auth)
             main(args.position, auth)
         except Exception as e:
-                logger.info(f"Exception in beggar: {e} traceback: {e.__traceback__}")
+            logger.info(f"Exception in beggar: {e} traceback: {e.__traceback__}")
         finally:
             clean_orders(auth)
             clean_positions(auth)
-            logger.info("Exiting beggar")
         if _should_exit:
             break
-        logger.info("Restarting beggar after 120 seconds")
-        time.sleep(120)
+        for i in range(120):
+            time.sleep(1)
+            clean_orders(auth)
+            clean_positions(auth)
+            print(f"Restarting beggar in {120 - i} seconds...")

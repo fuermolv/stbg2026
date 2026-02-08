@@ -82,7 +82,7 @@ def clean_positions(auth):
             time.sleep(5)
         positions = query_positions(auth)
     logger.info("taker clean position done")
-      
+    
 
 
 def create_orders(auth, orders):
