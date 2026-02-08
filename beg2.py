@@ -30,8 +30,8 @@ signal.signal(signal.SIGTERM, _on_term)
 signal.signal(signal.SIGINT, _on_term)
 
 
-BPS = 8
-MIN_BPS = 6.5
+BPS = 8.5
+MIN_BPS = 7
 MAX_BPS = 10
 THROTTLE_BPS = 12
 MIN_DEP = 4
@@ -127,13 +127,15 @@ def main(position, auth):
         else:   
             current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
             current_hour = current_time.hour
-            if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
-                if order_dict:
-                    clean_orders(auth)
-                    order_dict = None
-                logger.info(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
-                time.sleep(10)
-                continue
+            current_weekday = current_time.weekday()
+            if current_weekday >= 5:  # Skip on weekends
+                if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
+                    if order_dict:
+                        clean_orders(auth)
+                        order_dict = None
+                    logger.info(f'now is between {SKIP_HOUR_START} and {SKIP_HOUR_END}, skipping order creation')
+                    time.sleep(10)
+                    continue
             clean_orders(auth)
             long_order = {
                 'price': format(mark_price * (1 - BPS / 10000), ".2f"),
