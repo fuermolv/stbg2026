@@ -55,7 +55,7 @@ def clean_positions(auth):
         send_lark_message(f'Cleaning position: side={side}, qty={qty}, entry_price={entry_price}, maker price {price}, position_value={abs(float(position["position_value"]))}')
         logger.info(f'Cleaning position: side={side}, qty={qty}, entry_price={entry_price}, maker price {price}, position_value={abs(float(position["position_value"]))}')
         cl_ord_id = maker_clean_position(auth, price, qty, clean_side)
-        for index in range(60*10):
+        for index in range(60*30):
             logger.info(f'{index} waiting maker cleaning position order  qty: {qty}  order price: {price}')
             if not [position for position in query_positions(auth) if position['qty'] and float(position['qty']) != 0]:
                 logger.info("maker clean position filled")
