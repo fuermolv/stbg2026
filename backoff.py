@@ -38,7 +38,7 @@ import time
 from collections import deque
 
 class CancelBackoff:
-    def __init__(self, base_seconds=2, factor=2, window_seconds=120, max_seconds=None):
+    def __init__(self, base_seconds=2, factor=2, window_seconds=90, max_seconds=None):
         self.base = float(base_seconds)
         self.factor = float(factor)
         self.window = float(window_seconds)
