@@ -128,7 +128,7 @@ def main(position, auth):
             current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
             current_hour = current_time.hour
             current_weekday = current_time.weekday()
-            if current_weekday >= 5:  # Skip on weekends
+            if current_weekday <= 5:  # Skip on weekends
                 if SKIP_HOUR_START <= current_hour < SKIP_HOUR_END:
                     if order_dict:
                         clean_orders(auth)
