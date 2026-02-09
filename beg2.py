@@ -86,9 +86,10 @@ def main(position, auth):
             long_depeth = book_ws.depth_above_price(st_book, order_dict['long_price'])
             if last_price != mark_price:
                 last_price = mark_price
-                if time.time() - last_log_timestamp > 1:
+                now_timestmp = time.time()
+                if now_timestmp - last_log_timestamp > 1:
                     logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}')
-                    last_log_timestamp = time.time()
+                    last_log_timestamp = now_timestmp
             if st_position:
                 logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}')
                 if st_position['qty'] and float(st_position['qty']) != 0:
