@@ -1,4 +1,3 @@
-
 import json
 import logging
 import time
@@ -53,13 +52,13 @@ def main(position, auth):
         #     if p['qty'] and float(p['qty']) != 0:
         #         logger.info(f"position update: {p}")
         st_position = p
-    
+
     book_ws = StandXBookWS(set_book)
     book_ws.start_in_thread()
 
     pos_ws = StandXPositionWS(set_position, access_token=auth['access_token'])
     pos_ws.start_in_thread()
-    
+
     order_dict = None
     last_price = 0
     last_log_timestamp = 0
@@ -73,13 +72,13 @@ def main(position, auth):
         best_ask_price, best_bid_price = book_ws.get_best_ask_bid(st_book)
         if not mark_price:
             raise Exception("invalid mark price from ws")
-        
+
         if order_dict:
             # long_diff_bps = (best_bid_price - order_dict['long_price']) / best_bid_price * 10000 if order_dict['long_cl_ord_id'] else None
             # short_diff_bps = (order_dict['short_price'] - best_ask_price) / best_ask_price * 10000 if order_dict['short_cl_ord_id'] else None
-            
+
             # mark_price
-            long_diff_bps = (mark_price - order_dict['long_price']) / mark_price * 10000 if order_dict['long_cl_ord_id'] else None 
+            long_diff_bps = (mark_price - order_dict['long_price']) / mark_price * 10000 if order_dict['long_cl_ord_id'] else None
             short_diff_bps = (order_dict['short_price'] - mark_price) / mark_price * 10000 if order_dict['short_cl_ord_id'] else None
 
             short_depeth = book_ws.depth_below_price(st_book, order_dict['short_price'])
@@ -91,8 +90,8 @@ def main(position, auth):
                     logger.info(f'pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}')
                     last_log_timestamp = now_timestmp
             if st_position:
-                logger.info(f'st_position detect, pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}')
                 if st_position['qty'] and float(st_position['qty']) != 0:
+                    logger.info(f'st_position detect, pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}')
                     logger.info("existing position detected, canceling orders and cleaning position")
                     cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
                     clean_positions(auth)
@@ -102,12 +101,11 @@ def main(position, auth):
                         if _should_exit:
                             break
                         time.sleep(1)
-                continue
+                    continue
             time_diff = time.time() - st_book_ts
             if (long_diff_bps <= MIN_BPS or long_diff_bps >= MAX_BPS or short_diff_bps <= MIN_BPS or short_diff_bps >= MAX_BPS) \
             or time_diff > 0.6 \
             or (short_depeth < MIN_DEP or long_depeth < MIN_DEP):
-
                 logger.info(f'out of range, pos:{position}, mark_price: {mark_price}, best_ask: {best_ask_price}, best_bid: {best_bid_price}, long order bps: {long_diff_bps}, short order bps: {short_diff_bps}, long_depth:{format(long_depeth, ".3f")}, short_depth:{format(short_depeth, ".3f")}, time_diff: {format(time_diff, ".3f")}')
                 cancel_orders(auth, [cid for cid in [order_dict['long_cl_ord_id'], order_dict['short_cl_ord_id']] if cid])
                 clean_orders(auth)
@@ -123,8 +121,8 @@ def main(position, auth):
                         if st_position:
                             break
                         time.sleep(1)
-                
-        else:   
+
+        else:
             current_time = datetime.now(ZoneInfo("Asia/Shanghai"))
             current_hour = current_time.hour
             current_weekday = current_time.weekday()
@@ -219,5 +217,3 @@ if __name__ == "__main__":
             clean_orders(auth)
             clean_positions(auth)
             print(f"Restarting beggar in {120 - i} seconds...")
-
-
