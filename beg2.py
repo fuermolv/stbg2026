@@ -38,7 +38,7 @@ st_position = None
 
 
 def main(position, auth):
-    backoff = CancelBackoff()
+    backoff = CancelBackoff(max_seconds=150)
     logger.info(f"Starting beggar with position size: {position}")
     def set_book(b):
         global st_book
