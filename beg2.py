@@ -119,7 +119,8 @@ def main(position, auth):
                     logger.info(f"bps out of range, canceling orders, sleeping for {next_sleep} seconds")
                     for _ in range(int(next_sleep)):
                         if st_position:
-                            break
+                            if st_position['qty'] and float(st_position['qty']) != 0:
+                                break
                         time.sleep(1)
 
         else:
